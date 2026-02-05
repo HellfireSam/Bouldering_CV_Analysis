@@ -1,3 +1,8 @@
 {
-    "python-envs.pythonProjects": []
+    "python-envs.pythonProjects": [],
+    "code-runner.executorMap": {
+        // "python": "&\"C:\\Users\\USER\\.conda\\envs\\bouldering_cv_analysis_env\\python.exe\""
+        "python": "python"
+    },
+    "code-runner.runInTerminal": true
 }

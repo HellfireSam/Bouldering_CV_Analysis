@@ -120,7 +120,7 @@ class PoseLandmarkerModel:
 			raise ValueError("Input image parsed for detection cannot be None.")
 			
 		if self.input_mode != "image" and frame_timestamp is None:
-			raise ValueError("frame_timestamp must be provided for live_stream mode.")
+			raise ValueError("frame_timestamp must be provided for video or live_stream mode.")
 		
 		if self.input_mode == "live_stream":
 			return self.landmarker.detect_async(image, frame_timestamp)

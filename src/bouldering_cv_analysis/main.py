@@ -72,7 +72,7 @@ if __name__ == "__main__":
 		output_segmentation_masks=True
 	)
 	detector = vision.PoseLandmarker.create_from_options(options)
-	input(type(detector))
+	# input(type(detector))
 	
 	# Load image 
 	bgr = cv2.imread(IMG_PATH) 
