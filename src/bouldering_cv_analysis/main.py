@@ -59,7 +59,6 @@ def draw_landmarks_on_image(rgb_image, detection_result):
 
 	return annotated_image
 
-# def 
 
 if __name__ == "__main__":
 	load_dotenv()
@@ -73,6 +72,7 @@ if __name__ == "__main__":
 		output_segmentation_masks=True
 	)
 	detector = vision.PoseLandmarker.create_from_options(options)
+	input(type(detector))
 	
 	# Load image 
 	bgr = cv2.imread(IMG_PATH) 
