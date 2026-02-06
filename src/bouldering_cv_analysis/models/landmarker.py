@@ -9,6 +9,10 @@ Purpose:
 
 """
 
+from typing import Union, Literal
+import cv2
+import numpy as np
+
 import mediapipe as mp
 from mediapipe.tasks import python
 from mediapipe.tasks.python import vision
@@ -69,14 +73,14 @@ class PoseLandmarkerModel:
 			raise ValueError(f"Invalid input_mode: {self.input_mode}. Must be 'image', 'video', or 'live_stream'.")
 		
 		BaseOptions = mp.tasks.BaseOptions
-		PoseLandmarker = mp.tasks.vision.PoseLandmarker
-		PoseLandmarkerOptions = mp.tasks.vision.PoseLandmarkerOptions
-		VisionRunningMode = mp.tasks.vision.RunningMode
+		PoseLandmarker = vision.PoseLandmarker
+		PoseLandmarkerOptions = vision.PoseLandmarkerOptions
+		VisionRunningMode = vision.RunningMode
 
 		if self.input_mode == "live_stream":
 			# PoseLandmarkerResult = mp.tasks.vision.PoseLandmarkerResult
 			# Create a pose landmarker instance with the live stream mode:
-			def print_result(result: mp.tasks.vision.pose_landmarker.PoseLandmarkerOptions, output_image: mp.Image, timestamp_ms: int):
+			def print_result(result: vision.pose_landmarker.PoseLandmarkerOptions, output_image: mp.Image, timestamp_ms: int):
 				print('pose landmarker result: {}'.format(result))
 
 		running_mode_map = {"image": VisionRunningMode.IMAGE, 
@@ -95,19 +99,25 @@ class PoseLandmarkerModel:
 
 		return PoseLandmarker.create_from_options(options) 
 
-	
-	# def detect(self, image: mp.Image, frame_timestamp: int=None) -> PoseLandmarkerResult:  
-	def detect(self, image: mp.Image, frame_timestamp: int=None) -> PoseLandmarkerResult:  
+	def detect(
+		self,
+		image: Union[mp.Image, str, np.ndarray],
+		frame_timestamp: int=None,
+		image_mode: Literal["RGB", "BGR"]="BGR",
+	) -> PoseLandmarkerResult:
 		"""
-		Run pose detection and return the raw MediaPipe result object.
+		Run pose detection on an image and return the raw MediaPipe result object.
 
 		The result is typically parsed to analyzer.py to extract relevant
 		pose landmark data.
 
 		Args:
-			image (mp.Image): The input image for pose detection.
-			frame_timestamp (int, optional): Frame timestamp in milliseconds.
-				Required for "video" and "live_stream" modes. Defaults to None.
+			image (mp.Image | str | np.ndarray): The input image for pose detection. If a string
+				is provided, it is treated as a file path and loaded via OpenCV. If a numpy array
+				is provided, it is treated as an image in BGR format, unless image_mode is set to "RGB".
+			frame_timestamp (int, optional): Frame timestamp in milliseconds. Required
+				for "video" and "live_stream" modes. Defaults to None.
+			image_mode ("RGB" | "BGR"): Color format for numpy arrays and mp.Image inputs.
 
 		Raises:
 			ValueError: If image is None.
@@ -122,6 +132,36 @@ class PoseLandmarkerModel:
 		if self.input_mode != "image" and frame_timestamp is None:
 			raise ValueError("frame_timestamp must be provided for video or live_stream mode.")
 		
+		# ilay: unsure if we need to resize the image for performance
+		# def resize_with_aspect(image: np.ndarray, max_size=640):
+		# 	h, w = image.shape[:2]
+		# 	scale = max_size / max(h, w)
+		# 	new_w = int(w * scale)
+		# 	new_h = int(h * scale)
+		# 	return cv2.resize(image, (new_w, new_h), interpolation=cv2.INTER_AREA)
+
+		if isinstance(image, str): # file path
+			bgr = cv2.imread(image)
+			if bgr is None:
+				raise ValueError(f"Failed to load image from path: {image}")
+			rgb = cv2.cvtColor(bgr, cv2.COLOR_BGR2RGB)
+			image = mp.Image(image_format=mp.ImageFormat.SRGB, data=rgb)
+		
+		elif isinstance(image, np.ndarray): # numpy array
+			if image_mode == "BGR":
+				rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+			else:
+				rgb = image
+			image = mp.Image(image_format=mp.ImageFormat.SRGB, data=rgb)
+		
+		elif isinstance(image, mp.Image): # mp.Image
+			if image_mode == "BGR":
+				rgb = cv2.cvtColor(image.numpy_view(), cv2.COLOR_BGR2RGB)
+				image = mp.Image(image_format=mp.ImageFormat.SRGB, data=rgb)
+		else:
+			raise ValueError("Unsupported image type. Expected mp.Image, str, or np.ndarray.")
+			
+		# returning the prediction results
 		if self.input_mode == "live_stream":
 			return self.landmarker.detect_async(image, frame_timestamp)
 		elif self.input_mode == "video":
