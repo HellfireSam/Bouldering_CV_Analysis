@@ -22,7 +22,7 @@ def draw_landmarks_on_image_mediapipe(
 	image_format: Literal["RGB", "BGR"] = "BGR",
 ) -> np.ndarray:
 	"""
-	Draw pose landmarks and connections on an image using MediaPipe default methods.
+	Draw pose landmarks and connections on an image or a frame using MediaPipe default methods.
 
 	Args:
 		image: Input image in RGB or BGR format, or a file path to an image (image_format will be set to "BGR" if a file path is provided).
@@ -99,6 +99,8 @@ if __name__ == "__main__":
 	fps = cap.get(cv2.CAP_PROP_FPS)
 	if fps <= 0:
 		fps = 30.0
+		print("Warning: Failed to read FPS from video, defaulting to 30 FPS.")
+		
 	frame_width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
 	frame_height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
 	if frame_width <= 0 or frame_height <= 0:

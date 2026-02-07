@@ -9,7 +9,7 @@ Purpose:
 
 """
 
-from typing import Union, Literal
+from typing import Callable, Literal, Optional, Union
 import cv2
 import numpy as np
 
@@ -31,7 +31,8 @@ class PoseLandmarkerModel:
 				min_pose_detection_confidence: float=0.5,
 				min_pose_presence_confidence: float=0.5,
 				min_tracking_confidence: float=0.5,
-				output_segmentation_masks: bool=False):
+				output_segmentation_masks: bool=False,
+				result_callback: Optional[Callable[[PoseLandmarkerResult, mp.Image, int], None]] = None):
 		"""
 		Initialize the PoseLandmarkerModel with configuration parameters.
 		
@@ -53,6 +54,7 @@ class PoseLandmarkerModel:
 		self.min_pose_presence_confidence = min_pose_presence_confidence
 		self.min_tracking_confidence = min_tracking_confidence
 		self.output_segmentation_masks = output_segmentation_masks
+		self.result_callback = result_callback
 		self.landmarker = self._create_landmarker()
 
 
@@ -78,10 +80,8 @@ class PoseLandmarkerModel:
 		VisionRunningMode = vision.RunningMode
 
 		if self.input_mode == "live_stream":
-			# PoseLandmarkerResult = mp.tasks.vision.PoseLandmarkerResult
-			# Create a pose landmarker instance with the live stream mode:
-			def print_result(result: vision.pose_landmarker.PoseLandmarkerOptions, output_image: mp.Image, timestamp_ms: int):
-				print('pose landmarker result: {}'.format(result))
+			def _default_result_callback(result: PoseLandmarkerResult, output_image: mp.Image, timestamp_ms: int):
+				print(f"pose landmarker result: {result}")
 
 		running_mode_map = {"image": VisionRunningMode.IMAGE, 
 							"video": VisionRunningMode.VIDEO, 
@@ -95,7 +95,7 @@ class PoseLandmarkerModel:
 			min_pose_presence_confidence=self.min_pose_presence_confidence,
 			min_tracking_confidence=self.min_tracking_confidence,
 			output_segmentation_masks=self.output_segmentation_masks,
-			result_callback=print_result if self.input_mode == "live_stream" else None)
+			result_callback=(self.result_callback or _default_result_callback) if self.input_mode == "live_stream" else None)
 
 		return PoseLandmarker.create_from_options(options) 
 
@@ -104,7 +104,7 @@ class PoseLandmarkerModel:
 		image: Union[mp.Image, str, np.ndarray],
 		frame_timestamp: int=None,
 		image_mode: Literal["RGB", "BGR"]="BGR",
-	) -> PoseLandmarkerResult:
+	) -> PoseLandmarkerResult | None:
 		"""
 		Run pose detection on an image and return the raw MediaPipe result object.
 
@@ -125,6 +125,7 @@ class PoseLandmarkerModel:
 				"live_stream" modes.
 		Returns:
 			PoseLandmarkerResult: Pose landmarker result object.
+			None: In live_stream mode, results are returned via the result_callback.
 		"""
 		if image is None:
 			raise ValueError("Input image parsed for detection cannot be None.")
